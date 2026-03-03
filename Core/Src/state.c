@@ -5,7 +5,7 @@
  *      Author: User
  */
 
-#include "types.h"
+#include "Types.h"
 #include "state.h"    // 자신의 헤더를 포함하여 함수 프로토타입 선언 확인
 #include "ecs_com.h"  // sendStateToECS() 사용을 위해 필요
 #include "laying.h"   // calculateDriveTime() 등 사용을 위해 필요
@@ -22,6 +22,13 @@ void executeStateProcess(void) {
         case STATE_ERROR:   executeErrorProcess(); break;
     }
 }
+/*
+ *STATE_INIT           = 0x00, // 초기화
+    STATE_READY_ALIGN    = 0x01, // 정렬 신호 수신 대기 (STANDBY)
+    STATE_ALIGN       = 0x02, // 정렬 중
+    STATE_FIRING         = 0x03, // 사격 중
+    STATE_ERROR          = 0x04  // 고장 상태
+ */
 
 void executeInitProcess(void) {
     // 변수 및 HW 초기화 로직 [cite: 277-278, 520]
@@ -67,6 +74,6 @@ void executeLaunchProcess(void) {
 void executeErrorProcess(void) {
     // 긴급 차단 및 Failsafe [cite: 291-292, 571-572, 583]
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET); // 레이저 OFF
-    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, 1500);   // 모터 중립
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 1500);   // 모터 중립 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, ccr_val);
     sendStateToECS();
 }

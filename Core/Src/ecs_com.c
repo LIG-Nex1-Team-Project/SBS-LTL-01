@@ -33,11 +33,25 @@ void convertDataToLTLStruct(void) {
 
     // 3. 명령에 따른 동작 분기
     switch (commandMode) {
-        case 0x00: // ALIGN (정렬)
+        case 0x00: // init (정렬)
             g_LTL_controlData.targetAngle = targetAngle;
             g_LTL_currentState = STATE_ALIGN;
             // 레이저 끄기 (안전을 위해 정렬 중에는 끔)
             HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+            // LED 확인
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+            // [모터 구동 핵심 코드]
+            // 0~180도 각도를 500~2500 CCR 값으로 변환
+            uint32_t ccr_val = 500 + (uint32_t)(targetAngle * (2000.0f / 180.0f));
+
+            // 안전 제한 (0.5ms ~ 2.5ms 범위 준수)
+            if (ccr_val < 500)
+            	ccr_val = 500;
+            if (ccr_val > 2500)
+            	ccr_val = 2500;
+
+            // TIM4 CH2(PB7)에 적용
+            __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, ccr_val);
             break;
 
         case 0x01: // FIRE (발사)
@@ -65,14 +79,24 @@ void sendStateToECS(void) {
     uint32_t tx_mailbox;
     uint8_t tx_data[8] = {0, };
 
-    // ECS의 LtlStatus_e 열거형에 맞춰 매핑
-    if (g_LTL_status.isAlignComplete) {
-        tx_data[0] = 0x01; // LTL_STATUS_ALIGN_DONE
-    } else if (g_LTL_currentState == STATE_ERROR) {
-        tx_data[0] = 0x03; // LTL_STATUS_ERROR
-    } else if (g_LTL_currentState == STATE_LAUNCH) {
-        tx_data[0] = 0x02; // LTL_STATUS_FIRE_DONE (발사 중/완료)
-    }
+    switch (g_LTL_currentState) {
+            case STATE_INIT:
+                tx_data[0] = 0x00; // 초기화
+                break;
+            case STATE_STANDBY:
+                tx_data[0] = 0x01; // 정렬 신호 수신 대기
+                break;
+            case STATE_ALIGN:
+                tx_data[0] = 0x02; // 정렬 중
+                break;
+            case STATE_LAUNCH:
+                tx_data[0] = 0x03; // 사격 중
+                break;
+            case STATE_ERROR:
+            default:
+                tx_data[0] = 0x04; // 고장 상태
+                break;
+        }
 
     // ECS에서 정의한 수신 ID로 변경
     tx_header.ExtId = 0x00000400;

@@ -13,11 +13,11 @@
 
 // 시스템 상태 정의 (A21~A25 CSU 연계) [cite: 400-403, 456-459]
 typedef enum {
-    STATE_INIT = 0,
-    STATE_STANDBY,
-    STATE_ALIGN,
-    STATE_LAUNCH,
-    STATE_ERROR
+    STATE_INIT           = 0x00, // 초기화
+    STATE_STANDBY   = 0x01, // 정렬 신호 수신 대기 (STANDBY)
+    STATE_ALIGN       = 0x02, // 정렬 중
+    STATE_LAUNCH       = 0x03, // 사격 중
+    STATE_ERROR          = 0x04  // 고장 상태
 } LTL_state_t;
 
 // 제어 및 피드백 데이터 구조체 [cite: 408-411, 460-466]
@@ -38,7 +38,7 @@ extern LTL_state_t g_LTL_currentState;
 extern LTL_control_t g_LTL_controlData;
 extern LTL_status_t g_LTL_status;
 extern CAN_HandleTypeDef hcan;
-extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim2;
 extern uint8_t rx_data[8];
 extern uint8_t uart_rx_buf[8];
 

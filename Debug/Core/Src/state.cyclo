@@ -1,6 +1,6 @@
 state.c:16:6:executeStateProcess	6
-state.c:26:6:executeInitProcess	1
-state.c:33:6:executeStanbyProcess	2
-state.c:42:6:executeAlignProcess	3
-state.c:58:6:executeLaunchProcess	2
-state.c:67:6:executeErrorProcess	1
+state.c:33:6:executeInitProcess	1
+state.c:40:6:executeStanbyProcess	2
+state.c:49:6:executeAlignProcess	3
+state.c:65:6:executeLaunchProcess	2
+state.c:74:6:executeErrorProcess	1

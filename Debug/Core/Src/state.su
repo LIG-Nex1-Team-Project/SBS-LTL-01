@@ -1,6 +1,6 @@
 ../Core/Src/state.c:16:6:executeStateProcess	8	static
-../Core/Src/state.c:26:6:executeInitProcess	4	static
-../Core/Src/state.c:33:6:executeStanbyProcess	8	static
-../Core/Src/state.c:42:6:executeAlignProcess	8	static
-../Core/Src/state.c:58:6:executeLaunchProcess	8	static
-../Core/Src/state.c:67:6:executeErrorProcess	8	static
+../Core/Src/state.c:33:6:executeInitProcess	4	static
+../Core/Src/state.c:40:6:executeStanbyProcess	8	static
+../Core/Src/state.c:49:6:executeAlignProcess	8	static
+../Core/Src/state.c:65:6:executeLaunchProcess	8	static
+../Core/Src/state.c:74:6:executeErrorProcess	8	static

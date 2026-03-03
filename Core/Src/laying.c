@@ -26,7 +26,7 @@ uint32_t calculateDriveTime(void) {
 void updateServoPWM(void) {
     // 0~180도 -> 1000~2000 Pulse (1ms~2ms) [cite: 541, 650]
     uint32_t pulse = 1000 + (uint32_t)(g_LTL_controlData.targetAngle * (1000.0f / 180.0f));
-    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, pulse);
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, pulse);
     g_LTL_status.driveStartTimeMs = HAL_GetTick();
 }
 
