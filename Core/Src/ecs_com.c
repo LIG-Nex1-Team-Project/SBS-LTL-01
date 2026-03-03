@@ -10,7 +10,7 @@
 #include <string.h>
 
 CAN_RxHeaderTypeDef rx_header;
-uint8_t rx_data[8];
+//uint8_t rx_data[8];
 
 // A11 CSU: 데이터 수신 및 변환 [cite: 265-266, 427-428]
 void receiveDataFromECS(void) {
@@ -24,33 +24,63 @@ void receiveDataFromECS(void) {
 }
 
 void convertDataToLTLStruct(void) {
-    // Byte 0~3: float Target_Degree (Little-Endian) [cite: 687, 701]
-    memcpy(&g_LTL_controlData.targetAngle, &rx_data[0], sizeof(float));
+    // 1. 데이터 복사 (Byte 0~3: float 각도)
+    float targetAngle;
+    memcpy(&targetAngle, &rx_data[0], 4);
 
-    // Byte 4: Fire_Command [cite: 687]
-    uint8_t cmd = rx_data[4];
-    if (cmd == 0x00) g_LTL_currentState = STATE_ALIGN;
-    else if (cmd == 0x01) g_LTL_currentState = STATE_LAUNCH;
-    else if (cmd == 0x02) g_LTL_currentState = STATE_ERROR;
+    // 2. 명령 모드 추출 (Byte 4: uint8_t 명령)
+    uint8_t commandMode = rx_data[4];
+
+    // 3. 명령에 따른 동작 분기
+    switch (commandMode) {
+        case 0x00: // ALIGN (정렬)
+            g_LTL_controlData.targetAngle = targetAngle;
+            g_LTL_currentState = STATE_ALIGN;
+            // 레이저 끄기 (안전을 위해 정렬 중에는 끔)
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+            break;
+
+        case 0x01: // FIRE (발사)
+            // 정렬이 완료된 상태에서만 발사 가능하게 로직 추가 가능
+            g_LTL_currentState = STATE_LAUNCH;
+            // 레이저 켜기 (PB6 High)
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+
+            break;
+
+        case 0x02: // EMERGENCY (긴급 중지)
+            g_LTL_currentState = STATE_ERROR;
+            // 모든 구동 정지 및 레이저 끄기
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+            break;
+
+        default:
+            break;
+    }
 }
 
 // A12 CSU: 상태 보고 송신 [cite: 270-272, 439-441, 694]
 void sendStateToECS(void) {
     CAN_TxHeaderTypeDef tx_header;
     uint32_t tx_mailbox;
-    uint8_t tx_status[8] = {0,};
+    uint8_t tx_data[8] = {0, };
 
-    // 상태 매핑: 0x00:초기화, 0x01:정렬중, 0x02:정렬완료, 0x03:사격중, 0x04:고장 [cite: 687]
-    if (g_LTL_currentState == STATE_INIT) tx_status[0] = 0x00;
-    else if (g_LTL_currentState == STATE_ALIGN) tx_status[0] = 0x01;
-    else if (g_LTL_currentState == STATE_LAUNCH) tx_status[0] = 0x03;
-    else if (g_LTL_currentState == STATE_ERROR) tx_status[0] = 0x04;
-    else tx_status[0] = (g_LTL_status.isAlignComplete) ? 0x02 : 0x00;
+    // ECS의 LtlStatus_e 열거형에 맞춰 매핑
+    if (g_LTL_status.isAlignComplete) {
+        tx_data[0] = 0x01; // LTL_STATUS_ALIGN_DONE
+    } else if (g_LTL_currentState == STATE_ERROR) {
+        tx_data[0] = 0x03; // LTL_STATUS_ERROR
+    } else if (g_LTL_currentState == STATE_LAUNCH) {
+        tx_data[0] = 0x02; // LTL_STATUS_FIRE_DONE (발사 중/완료)
+    }
 
-    tx_header.ExtId = 0x18888408; // 발사대 송신 ID [cite: 699]
+    // ECS에서 정의한 수신 ID로 변경
+    tx_header.ExtId = 0x00000400;
     tx_header.IDE = CAN_ID_EXT;
     tx_header.RTR = CAN_RTR_DATA;
     tx_header.DLC = 8;
 
-    HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_status, &tx_mailbox);
+    if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) > 0) {
+        HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_data, &tx_mailbox);
+    }
 }

@@ -9,6 +9,7 @@
 
 #include "main.h"
 #include <stdint.h>
+#include <string.h>
 
 // 시스템 상태 정의 (A21~A25 CSU 연계) [cite: 400-403, 456-459]
 typedef enum {
@@ -38,6 +39,8 @@ extern LTL_control_t g_LTL_controlData;
 extern LTL_status_t g_LTL_status;
 extern CAN_HandleTypeDef hcan;
 extern TIM_HandleTypeDef htim4;
+extern uint8_t rx_data[8];
+extern uint8_t uart_rx_buf[8];
 
 #endif
  /* INC_TYPES_H_ */

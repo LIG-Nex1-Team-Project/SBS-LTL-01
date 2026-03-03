@@ -50,7 +50,8 @@ TIM_HandleTypeDef htim4;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+uint8_t rx_data[8];
+uint8_t uart_rx_buf[8];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -60,7 +61,8 @@ static void MX_USART2_UART_Init(void);
 static void MX_CAN_Init(void);
 static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
-
+/* UART로 8바이트 데이터를 받으면 실행되는 콜백 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -100,20 +102,20 @@ int main(void)
   MX_CAN_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_UART_Receive_IT(&huart2, uart_rx_buf, 8);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  // 2. ?���? 명령 ?��?�� 체크 [cite: 264]
+	  // 2. ?���? 명령 ?��?�� 체크 [cite: 264]
 	          receiveDataFromECS();
 
-	          // 3. ?��?�� 머신 구동 [cite: 383, 506]
+	          // 3. ?��?�� 머신 구동 [cite: 383, 506]
 	          executeStateProcess();
 
-	          // 4. ?��?�� 보고 (50ms 주기 ?��) [cite: 275]
+	          // 4. ?��?�� 보고 (50ms 주기 ?��) [cite: 275]
 	          sendStateToECS();
     /* USER CODE END WHILE */
 
@@ -341,7 +343,20 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance == USART2) { // ST-Link 연결 포트
+    	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+        // 1. 받은 데이터를 CAN 수신 버퍼(rx_data)에 복사함
+        // 외부에서 선언된 rx_data 배열을 사용
+        memcpy(rx_data, uart_rx_buf, 8);
 
+        // 2. CAN 데이터 변환 함수를 강제로 호출함
+        convertDataToLTLStruct();
+
+        // 3. 다시 수신 대기
+        HAL_UART_Receive_IT(&huart2, uart_rx_buf, 8);
+    }
+}
 /* USER CODE END 4 */
 
 /**
