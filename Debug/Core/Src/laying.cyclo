@@ -1,4 +1,0 @@
-laying.c:19:10:calculateDriveTime	1
-laying.c:26:6:updateServoPWM	1
-laying.c:34:6:checkAlignmentStatus	2
-laying.c:42:6:controlLaserLaunch	3

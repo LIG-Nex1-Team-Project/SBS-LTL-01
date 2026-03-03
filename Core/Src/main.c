@@ -108,6 +108,8 @@ int main(void)
   HAL_UART_Receive_IT(&huart2, uart_rx_buf, 8);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3); // TIM2 채널 3 시작
  // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 1500);
+  canInit();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */

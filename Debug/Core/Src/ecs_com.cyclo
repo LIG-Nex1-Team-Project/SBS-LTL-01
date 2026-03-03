@@ -1,3 +1,0 @@
-ecs_com.c:16:6:receiveDataFromECS	4
-ecs_com.c:26:6:convertDataToLTLStruct	7
-ecs_com.c:77:6:sendStateToECS	6
