@@ -103,6 +103,8 @@ void sendStateToECS(void) {
     tx_header.IDE = CAN_ID_EXT;
     tx_header.RTR = CAN_RTR_DATA;
     tx_header.DLC = 8;
+    tx_header.TransmitGlobalTime = DISABLE;
+
 
     if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) > 0) {
         HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_data, &tx_mailbox);
