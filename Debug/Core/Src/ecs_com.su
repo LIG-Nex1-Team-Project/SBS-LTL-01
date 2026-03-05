@@ -1,0 +1,3 @@
+../Core/Src/ecs_com.c:17:6:receiveDataFromECS	8	static
+../Core/Src/ecs_com.c:31:6:convertDataToLTLStruct	32	static
+../Core/Src/ecs_com.c:86:6:sendStateToECS	48	static

@@ -25,6 +25,7 @@
 #include "ecs_com.h"
 #include "state.h"
 #include "laying.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -69,7 +70,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+int __io_putchar(int ch)
+{
+    HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+    return ch;
+}
 /* USER CODE END 0 */
 
 /**
@@ -105,25 +110,52 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart2, uart_rx_buf, 8);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3); // TIM2 채널 3 시작
- // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 1500);
-  canInit();
+    // 1. CAN 필터 설정 (이게 없으면 메시지가 수신되지 않음)
+    CAN_FilterTypeDef sFilterConfig;
+    sFilterConfig.FilterBank = 0;
+    sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+    sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+    sFilterConfig.FilterIdHigh = 0x0000;
+    sFilterConfig.FilterIdLow = 0x0000;
+    sFilterConfig.FilterMaskIdHigh = 0x0000; // 0으로 설정하면 모든 ID 수신 (테스트용)
+    sFilterConfig.FilterMaskIdLow = 0x0000;
+    sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+    sFilterConfig.FilterActivation = ENABLE;
+
+    if (HAL_CAN_ConfigFilter(&hcan, &sFilterConfig) != HAL_OK) {
+        Error_Handler();
+    }
+
+    // 2. CAN 주변장치 시작 (이게 없으면 전송/수신 모두 불가)
+    if (HAL_CAN_Start(&hcan) != HAL_OK) {
+        Error_Handler();
+    }
+
+    // 발사대 시작 확인 출력
+    printf("Launcher System Online!\r\n");
+    HAL_UART_Transmit(&huart2, (uint8_t*)"UART TEST\r\n", 11, 100);
+
+    HAL_UART_Receive_IT(&huart2, uart_rx_buf, 8);
+    HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
 
   /* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-	  // 2. ?���? 명령 ?��?�� 체크 [cite: 264]
-	          receiveDataFromECS();
+    /* Infinite loop */
+    /* USER CODE BEGIN WHILE */
+    while (1)
+    {
+        // 2. ECS 명령 데이터 수신 및 파싱
+        receiveDataFromECS();
 
-	          // 3. ?��?�� 머신 구동 [cite: 383, 506]
-	          executeStateProcess();
+        // 3. 상태 머신 구동 (여기서 조준, 사격 등의 동작 제어)
+        executeStateProcess();
 
-	          // 4. ?��?�� 보고 (50ms 주기 ?��) [cite: 275]
-	          sendStateToECS();
+        // 4. 상태 보고 주기 조정: 50ms -> 1000ms로 변경
+        static uint32_t last_send_tick = 0;
+        if (HAL_GetTick() - last_send_tick >= 1000) { // 💡 1초마다 한 번씩만 보고
+            sendStateToECS();
+            last_send_tick = HAL_GetTick();
+        }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

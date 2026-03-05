@@ -8,6 +8,7 @@
 #include "types.h"
 #include "ecs_com.h"  // 자신의 헤더 포함
 #include <string.h>
+#include <stdio.h>
 
 CAN_RxHeaderTypeDef rx_header;
 //uint8_t rx_data[8];
@@ -16,7 +17,11 @@ CAN_RxHeaderTypeDef rx_header;
 void receiveDataFromECS(void) {
     if (HAL_CAN_GetRxFifoFillLevel(&hcan, CAN_RX_FIFO0) > 0) {
         if (HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &rx_header, rx_data) == HAL_OK) {
+        	// [추가] 수신 확인 로그
+			printf("[CAN] Received ID: 0x%lx\r\n", rx_header.ExtId);
             if (rx_header.ExtId == 0x00000300) { // ECS 송신 ID 필터링 [cite: 698]
+            	// [추가] 데이터가 정상적으로 들어올 때마다 LD2(PA5) 상태 반전
+            	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
                 convertDataToLTLStruct();
             }
         }
@@ -31,10 +36,14 @@ void convertDataToLTLStruct(void) {
     // 2. 명령 모드 추출 (Byte 4: uint8_t 명령)
     uint8_t commandMode = rx_data[4];
 
+    // [로그 추가]
+    printf("[CAN RX] Angle: %.2f, Mode: %d\n", targetAngle, commandMode);
+
     // 3. 명령에 따른 동작 분기
     switch (commandMode) {
         case 0x00: // init (정렬)
             g_LTL_controlData.targetAngle = targetAngle;
+            g_LTL_status.isAlignComplete = 0; // 새로운 조준을 위해 완료 플래그 초기화 필수
             g_LTL_currentState = STATE_ALIGN;
             // 레이저 끄기 (안전을 위해 정렬 중에는 끔)
             HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
@@ -50,7 +59,7 @@ void convertDataToLTLStruct(void) {
             if (ccr_val > 2500)
             	ccr_val = 2500;
 
-            // TIM4 CH2(PB7)에 적용
+            // TIM2 CH4에 적용
             __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, ccr_val);
             break;
 
