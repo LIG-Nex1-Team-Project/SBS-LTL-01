@@ -46,28 +46,55 @@ void executeStanbyProcess(void) {
     }
 }
 
+// 1. 정렬 프로세스: 시작될 때 레이저를 무조건 끕니다.
 void executeAlignProcess(void) {
-    // 정렬 수행 및 감시 [cite: 283-284, 538, 547]
     static uint8_t started = 0;
     if (!started) {
+        // ⭐ [추가] 정렬(모터 이동) 시작 시 레이저를 끕니다.
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+        printf("[ALIGN] Motor Moving - Laser OFF\n");
+
         calculateDriveTime();
         updateServoPWM();
         started = 1;
     }
+
     checkAlignmentStatus();
+
     if (g_LTL_status.isAlignComplete) {
+        // UI 사격 버튼 활성화를 위해 상태 유지
         started = 0;
-        g_LTL_currentState = STATE_STANDBY;
-        sendStateToECS();
     }
 }
 
 void executeLaunchProcess(void) {
-    // 사격 통제 제어 [cite: 287-289, 562, 570]
-    if (g_LTL_status.isAlignComplete) {
-        controlLaserLaunch();
-    } else {
-        g_LTL_currentState = STATE_ERROR;
+    static uint32_t launchStartTime = 0;
+    static uint8_t isFiring = 0;
+
+    // 1. 사격 명령이 처음 들어온 시점
+    if (!isFiring) {
+        if (g_LTL_status.isAlignComplete) {
+            // 레이저 ON (PB6)
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+            launchStartTime = HAL_GetTick(); // 현재 시간 저장
+            isFiring = 1;
+            printf("[FIRE] Laser ON - Firing for 2 second...\n");
+        } else {
+            g_LTL_currentState = STATE_ERROR;
+            return;
+        }
+    }
+
+    // 2. 1초(1000ms)가 경과했는지 체크
+    if (HAL_GetTick() - launchStartTime >= 2000) {
+        isFiring = 0; // 플래그 초기화
+        printf("[FIRE] 1 second passed. Returning to ALIGN state to unlock UI.\n");
+
+        // 💡 핵심: 상태를 ALIGN으로 변경하여 UI 비활성화를 해제함
+        g_LTL_currentState = STATE_ALIGN;
+
+        // 레이저는 꺼지지 않고 유지됩니다.
+        // (이후 새로운 Align 명령이 들어와 모터가 움직일 때 꺼짐)
     }
 }
 
