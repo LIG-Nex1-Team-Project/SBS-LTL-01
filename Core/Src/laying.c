@@ -25,7 +25,7 @@ uint32_t calculateDriveTime(void) {
 // A32 CSU: SG90 PWM 출력 (PB7/D9, 64MHz 클럭 기준) [cite: 307-309, 647, 656]
 void updateServoPWM(void) {
     // 0~180도 -> 1000~2000 Pulse (1ms~2ms) [cite: 541, 650]
-    uint32_t pulse = 1000 + (uint32_t)(g_LTL_controlData.targetAngle * (1000.0f / 180.0f));
+    uint32_t pulse = 700 + (uint32_t)(g_LTL_controlData.targetAngle * (1900.0f / 180.0f));
     __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, pulse);
     g_LTL_status.driveStartTimeMs = HAL_GetTick();
 }
