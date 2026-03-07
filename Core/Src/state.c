@@ -39,6 +39,7 @@ void executeInitProcess(void) {
 
 void executeStanbyProcess(void) {
     // 명령 수신 대기 및 주기적 보고 [cite: 279-281, 534, 536]
+	updateServoPWM();
     static uint32_t lastTick = 0;
     if (HAL_GetTick() - lastTick >= 50) {
         sendStateToECS();
